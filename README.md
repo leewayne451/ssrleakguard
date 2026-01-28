@@ -1,35 +1,62 @@
-SSRLeakGuard is a security testing tool for detecting server-side rendering (SSR) data exposure and authorization inconsistencies in modern web applications, with a focus on Next.js.
+SSRLeakGuard
 
-It is designed as a phased research tool:
+Server‑side rendering blurs the boundary between server‑only and client‑visible data.
 
-- Phase 1: SSR data exposure detection
+Even when authentication and APIs are correctly implemented, SSR logic can accidentally:
 
-- Phase 2: Authorization inconsistency detection via differential SSR analysis
 
----
+- Serialize sensitive data into HTML responses
 
-Table of Contents
+- Expose different data to different users unintentionally
 
-1. Requirements
+- Allow personalized pages to be cached and reused across users
 
-2. Setting up SSRLeakGuard (Python virtual environment)
-
-3. Installing dependencies
-
-4. Running SSRLeakGuard
-
-5. Creating test SSR leaks
-
-- leak1.js (Phase 1)
-- leak2.js (Phase 2)
-
-6. Expected behavior
+SSRLeakGuard helps surface these hidden SSR‑specific risks.
 
 ---
 
-1. Requirements
+Project Phases
 
-System requirements
+SSRLeakGuard is structured into two phases, each targeting a distinct SSR security problem.
+
+
+Phase 1 — SSR Data Exposure Detection
+
+
+Detects sensitive or server‑only data embedded in SSR output, including:
+
+- Emails and other PII
+
+- Authorization roles
+
+- Internal identifiers
+
+- Tokens or configuration values
+
+This phase inspects both rendered HTML and structured SSR hydration data to identify information that should not be sent to the client, even if it is not visibly displayed.
+
+---
+
+Phase 2 — Authorization Inconsistency Detection
+
+Compares SSR responses across different authorization contexts (for example, guest vs authenticated users).
+
+
+By replaying the same SSR request with different cookies or session states, SSRLeakGuard detects:
+
+- Data visible only to certain users
+
+- Privilege‑related inconsistencies
+
+- Cross‑user SSR data exposure risks
+
+This phase focuses on who receives what data, rather than whether authentication itself is correct.
+
+---
+
+Requirements
+
+System Requirements
 
 - Python 3.8+
 
@@ -37,183 +64,146 @@ System requirements
 
 - npm (bundled with Node.js)
 
-Supported SSR framework
+Supported Frameworks
 
-- Next.js (Pages Router)
+Next.js (Pages Router)
 
 ---
 
-2. Setting up SSRLeakGuard (Python venv)
+Setup Instructions
 
-From the root of the SSRLeakGuard repository:
+1. Clone the repository
 
-Create a virtual environment
+	git clone https://github.com/YOUR_USERNAME/ssrleakguard.git
+	cd ssrleakguard
+
+---
+
+2. Create a Python virtual environment
+
 	python -m venv venv
 
-Activate the virtual environment
+Activate the environment:
+
 Windows (PowerShell):
+
 	venv\Scripts\activate
 
 Windows (Command Prompt):
+
 	venv\Scripts\activate.bat
 
 macOS / Linux:
+
 	source venv/bin/activate
-
-You should now see:
-	(venv)
-
-in your terminal.
 
 ---
 
-3. Installing dependencies
+3. Install dependencies
 
-Install required Python packages
+	pip install --upgrade pip
 	pip install -r requirements.txt
-
-Install SSRLeakGuard in editable mode
 	pip install -e .
 
-Verify installation
+Verify installation:
+
 	ssrleakguard --help
 
 ---
 
-4. Running SSRLeakGuard
+Running SSRLeakGuard
 
-Phase 1 — SSR data exposure detection
+Phase 1 — SSR Data Exposure
+
 	ssrleakguard http://localhost:3000/leak1
 
-Phase 2 — Authorization inconsistency detection
+Detects sensitive data embedded in SSR output.
+
+---
+
+Phase 2 — Authorization Inconsistency
+
 	ssrleakguard http://localhost:3000/leak2 \
 	  --context guest \
 	  --context user:next-auth.session-token=abc123
 
----
-
-5. Creating test SSR leaks (Next.js)
-
-Install node.js with Windows LTS installer, make sure to select Add to PATH (https://nodejs.org)
-	npx create-next-app vulnerable-nextjs
-	cd vulnerable-nextjs
-	npm run dev
-
-All test files go in:
-	vulnerable-nextjs/pages/
+Compares SSR responses across different authorization contexts.
 
 ---
 
-5.1 leak1.js — Phase 1 test (SSR data exposure)
+Test Pages
 
-This file demonstrates over-fetching and serialization of sensitive data into SSR output.
 
-Create:
-	pages/leak1.js
+The following intentionally vulnerable pages can be used to evaluate each phase.
 
-	export async function getServerSideProps() {
-	  const userRecord = {
-	    id: "u_83921",
-	    username: "john_doe",
-	    email: "john@example.com", // PII
-	    role: "admin",             // authorization detail
-	    internalId: "INT-77431",    // internal identifier
-	  };
-	
-	  return {
-	    props: {
-	      user: userRecord,
-	    },
-	  };
-	}
-	
-	export default function Leak1Page({ user }) {
-	  return (
-	    <div>
-	      <h1>User Profile</h1>
-	      <p>
-	        <strong>Username:</strong> {user.username}
-	      </p>
-	    </div>
-	  );
-	}
+
+leak1.js — Phase 1 Test
+
+Demonstrates over‑fetching and serialization of sensitive data into SSR output.
+
+All users receive the same SSR response, but sensitive fields are unnecessarily exposed.
 
 ---
 
-5.2 leak2.js — Phase 2 test (authorization inconsistency)
+leak2.js — Phase 2 Test
 
-This file demonstrates SSR output changing based on authentication context.
+Demonstrates authorization‑dependent SSR output.
 
-Create:
-	pages/leak2.js
-
-	export async function getServerSideProps(context) {
-	  const cookies = context.req.headers.cookie || "";
-	  const isAuthenticated = cookies.includes("next-auth.session-token");
-	
-	  const baseUser = {
-	    username: "john_doe",
-	    email: "john@example.com", // exposed to all users
-	  };
-	
-	  if (!isAuthenticated) {
-	    return {
-	      props: {
-	        user: baseUser,
-	      },
-	    };
-	  }
-	
-	  return {
-	    props: {
-	      user: {
-	        ...baseUser,
-	        role: "admin",          // only for authenticated users
-	        internalId: "INT-49321", // only for authenticated users
-	      },
-	    },
-	  };
-	}
-	
-	export default function Leak2Page({ user }) {
-	  return (
-	    <div>
-	      <h1>Welcome</h1>
-	      <p>
-	        <strong>Username:</strong> {user.username}
-	      </p>
-	      <p>
-	        <strong>Email:</strong> {user.email}
-	      </p>
-	    </div>
-	  );
-	}
+Authenticated users receive additional SSR data, allowing SSRLeakGuard to detect inconsistencies across contexts.
 
 ---
 
-6. Expected behavior
+Output Overview
 
-Phase 1 (leak1.js)
+- Phase 1 provides detailed, forensic‑style findings with context and evidence.
 
-- Email, role, and internal ID detected in SSR output
-
-- Findings reported with detailed context and snippets
-
-Phase 2 (leak2.js)
-
-- Guest vs authenticated SSR output differs
+- Phase 2 reports clean, field‑level authorization differences across users.
 
 ---
 
-Summary
+Detection Capabilities
 
+SSRLeakGuard can automatically detect 14 types of sensitive data:
 
-SSRLeakGuard demonstrates how server-side rendering can introduce subtle but serious security risks, even when APIs and authentication mechanisms are correctly implemented.
+Critical Severity
 
-The included test cases provide:
+AWS Access Keys
+AWS Secret Keys
+GitHub Personal Access Tokens
+Private Keys (RSA/SSH)
 
-- Clear Phase 1 validation
+High Severity
 
-- Clear Phase 2 validation
+JSON Web Tokens (JWT)
+Generic API Keys
+Bearer Tokens
+Slack Tokens
+Database Connection Strings
+Session IDs
 
-- Reproducible experimental results
+Medium Severity
+
+Email Addresses
+Phone Numbers
+
+---
+
+ssrleakguard/
+├── ssrleakguard/
+│   ├── core/
+│   │   ├── analyzer.py      # Main analysis logic
+│   │   ├── context.py       # Authorization context handling
+│   │   ├── differ.py        # SSR state comparison
+│   │   └── http_client.py   # HTTP request handling
+│   ├── detectors/
+│   │   ├── ssr_detector.py  # SSR framework detection
+│   │   ├── nextjs_parser.py # Next.js data extraction
+│   │   └── secret_scanner.py # Secret pattern matching
+│   ├── utils/
+│   │   ├── patterns.py      # Secret detection patterns
+│   │   ├── normalizer.py    # Data normalization
+│   │   └── reporter.py      # Output formatting
+│   └── cli.py               # Command-line interface
+├── README.md
+├── requirements.txt
+└── setup.py

@@ -9,10 +9,8 @@ class Reporter:
         "low": Fore.BLUE,
     }
 
-    from colorama import Fore, Style
-
-
     def print_console_report(self, results):
+        """Phase 1: SSR Data Exposure Report"""
         print(f"\n{Fore.CYAN}{'='*60}")
         print("ANALYSIS RESULTS")
         print(f"{'='*60}{Style.RESET_ALL}\n")
@@ -42,7 +40,7 @@ class Reporter:
         )
 
         if not findings:
-            print(f"{Fore.GREEN}[✓] No security issues detected")
+            print(f"{Fore.GREEN}[✓] No security issues detected{Style.RESET_ALL}")
 
         else:
             # Group findings by severity
@@ -85,24 +83,6 @@ class Reporter:
 
                 print()
 
-        # ✅ Phase 3 — Cache safety analysis
-        cache = results.get("cache_analysis")
-        if cache:
-            issues = cache.get("cache_issues", [])
-
-            print(f"\n{Fore.CYAN}CACHE SAFETY ANALYSIS{Style.RESET_ALL}")
-
-            if not issues:
-                print(f"{Fore.GREEN}[✓] No cache-related SSR issues detected")
-            else:
-                for idx, issue in enumerate(issues, 1):
-                    print(
-                        f"\n{Fore.RED}{idx}. {issue['issue']}"
-                        f"{Style.RESET_ALL}"
-                    )
-                    print(f"   Severity: {issue['severity']}")
-                    print(f"   Evidence: {issue['evidence']}")
-
         print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
         print(
             f"{Fore.YELLOW}[!] Found {len(findings)} potential "
@@ -110,36 +90,24 @@ class Reporter:
         )
         print(f"{Fore.CYAN}{'='*60}{Style.RESET_ALL}\n")
 
-    # ✅ NEW PHASE 2 REPORT
     def print_authorization_report(self, results):
-        print("\n=== AUTHORIZATION ANALYSIS ===")
+        """Phase 2: Authorization Inconsistency Report"""
+        print(f"\n{Fore.CYAN}{'='*60}")
+        print("AUTHORIZATION ANALYSIS")
+        print(f"{'='*60}{Style.RESET_ALL}")
         print(f"Target URL: {results['url']}")
-        print(f"Contexts tested: {', '.join(results['contexts'])}")
+        print(f"Contexts tested: {', '.join(results['contexts'])}\n")
 
         findings = results["authorization_findings"]
         if not findings:
             print(f"{Fore.GREEN}[✓] No authorization inconsistencies detected{Style.RESET_ALL}")
-            return
+        else:
+            print(f"{Fore.YELLOW}[!] Authorization Inconsistencies Found{Style.RESET_ALL}\n")
 
-        print(f"\n{Fore.YELLOW}[!] Authorization Inconsistencies Found{Style.RESET_ALL}\n")
+            for idx, f in enumerate(findings, 1):
+                print(f"{idx}. Baseline: {f['baseline']} → Other: {f['other']}")
+                print("   Diff:")
+                for k, v in f["diff"].items():
+                    print(f"     - {k}: {v}")
 
-        for idx, f in enumerate(findings, 1):
-            print(f"{idx}. Baseline: {f['baseline']} → Other: {f['other']}")
-            print("   Diff:")
-            for k, v in f["diff"].items():
-                print(f"     - {k}: {v}")
-
-
-    def print_cache_report(self, cache_analysis):
-        issues = cache_analysis.get("cache_issues", [])
-
-        print("\n=== CACHE SAFETY ANALYSIS ===")
-
-        if not issues:
-            print("[✓] No cache-related SSR issues detected")
-            return
-
-        for idx, issue in enumerate(issues, 1):
-            print(f"\n{idx}. {issue['issue']}")
-            print(f"   Severity: {issue['severity']}")
-            print(f"   Evidence: {issue['evidence']}")
+        print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}\n")

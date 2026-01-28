@@ -4,7 +4,6 @@ from ssrleakguard.detectors.secret_scanner import SecretScanner
 from ssrleakguard.utils.normalizer import normalize_ssr_data
 from ssrleakguard.core.differ import diff_ssr_states
 from ssrleakguard.core.context import AuthContext
-from ssrleakguard.detectors.cache_detector import CacheDetector
 
 
 class SSRAnalyzer:
@@ -20,6 +19,7 @@ class SSRAnalyzer:
             print(f"[DEBUG] {msg}")
 
     def analyze(self, url: str):
+        """Phase 1: SSR Data Exposure Detection"""
         response = self.client.get(url)
         html = response.text
 
@@ -31,7 +31,6 @@ class SSRAnalyzer:
             "framework": ssr_info["framework"],
             "metadata": ssr_info,
             "findings": [],
-            "cache_analysis": None,
         }
 
         if not ssr_info["is_ssr"]:
@@ -50,15 +49,10 @@ class SSRAnalyzer:
             self.secret_scanner.scan_content(html, context="HTML body")
         )
 
-        # ✅ Phase 3: cache analysis
-        results["cache_analysis"] = CacheDetector.analyze(
-            response, results["findings"]
-        )
-
         return results
 
-    # ✅ PHASE 2 ENTRY POINT
     def analyze_with_contexts(self, url: str, contexts: list[AuthContext]):
+        """Phase 2: Authorization Inconsistency Detection"""
         ssr_states = {}
 
         for ctx in contexts:

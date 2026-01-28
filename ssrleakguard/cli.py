@@ -35,6 +35,7 @@ def main(url, cookie, context, verbose):
         results = analyzer.analyze_with_contexts(url, contexts)
         reporter.print_authorization_report(results)
     else:
+        # Phase 1
         results = analyzer.analyze(url)
         reporter.print_console_report(results)
 
