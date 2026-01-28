@@ -1,0 +1,2 @@
+[console_scripts]
+ssrleakguard = ssrleakguard.cli:main
