@@ -90,16 +90,16 @@ Next.js (Pages Router)
 Setup Instructions
 
 1. Clone the repository
-
+```
 	git clone https://github.com/YOUR_USERNAME/ssrleakguard.git
 	cd ssrleakguard
-
+```
 ---
 
 2. Create a Python virtual environment
-
+```
 	python -m venv venv
-
+```
 Activate the environment:
 
 Windows (PowerShell):
@@ -195,3 +195,4 @@ Output Overview
 - Phase 2 reports clean, field‑level authorization differences across users.
 
 - Phase 3 highlights cache misconfigurations and unsafe SSR caching behavior.
+
