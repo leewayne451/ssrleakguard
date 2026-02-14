@@ -185,3 +185,13 @@ Medium Severity
 
 Email Addresses
 Phone Numbers
+
+---
+
+Flags:
+
+A report will be automatically generated with the output from the command that was ran. 
+To disable reports: 
+'''
+--no-report
+'''
